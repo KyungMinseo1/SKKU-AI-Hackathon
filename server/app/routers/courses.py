@@ -205,13 +205,23 @@ async def patch_course(
 @router.delete("/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_course(course_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)):
     course = await owned_course(db, user, course_id)
-    if await _course_has_questions(db, course_id):
-        raise HTTPException(status.HTTP_409_CONFLICT, "질문이 있는 강의는 삭제할 수 없습니다")
-    files = (
+    files = list(
+        (
+            await db.scalars(
+                select(Material.stored_path).join(Week, Material.week_id == Week.id).where(Week.course_id == course_id)
+            )
+        ).all()
+    )
+    files += (
         await db.scalars(
-            select(Material.stored_path).join(Week, Material.week_id == Week.id).where(Week.course_id == course_id)
+            select(StudentQuestion.capture_path).where(
+                StudentQuestion.course_id == course_id, StudentQuestion.capture_path.is_not(None)
+            )
         )
     ).all()
+    # 질문 테이블은 강좌·세션·주차 FK에 CASCADE가 없으므로 먼저 지운다(저장소3 → 저장소2 순).
+    await db.execute(delete(TeacherQuestion).where(TeacherQuestion.course_id == course_id))
+    await db.execute(delete(StudentQuestion).where(StudentQuestion.course_id == course_id))
     await db.delete(course)
     await db.commit()
     for f in files:

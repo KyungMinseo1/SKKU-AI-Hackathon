@@ -90,7 +90,7 @@ export default function TeacherDashboard(): React.JSX.Element {
   }, [])
 
   const deleteCourse = async (course: CourseSummary): Promise<void> => {
-    if (!window.confirm(`'${course.name}' 강의를 삭제할까요? 주차·개념·교안이 모두 삭제됩니다.`)) return
+    if (!window.confirm(`'${course.name}' 강의를 삭제할까요? 주차·개념·교안·학생 질문이 모두 삭제됩니다.`)) return
     setError(null)
     try {
       await api(`/api/courses/${course.id}`, { method: 'DELETE' })

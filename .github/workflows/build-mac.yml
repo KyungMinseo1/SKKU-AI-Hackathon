@@ -1,0 +1,38 @@
+name: Build macOS app
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: desktop
+    env:
+      # desktop/.env is gitignored; Vite reads VITE_* from the process env at build time.
+      VITE_API_BASE_URL: https://askkup-skku.duckdns.org
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # No Apple Developer certificate: ad-hoc sign. Hardened runtime + ad-hoc rejects Electron's
+      # pre-signed frameworks (different Team ID), so it must be off.
+      - run: >-
+          npx electron-builder --mac --universal --publish never
+          -c.mac.identity=- -c.mac.hardenedRuntime=false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: askkup-mac
+          path: desktop/dist/*.dmg
+          if-no-files-found: error

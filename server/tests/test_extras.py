@@ -1,4 +1,5 @@
 from datetime import timedelta
+from pathlib import Path
 
 from app.models import StudentQuestion
 
@@ -94,3 +95,29 @@ async def test_move_teacher_question(client, api):
 
     r = await client.patch(f"/api/teacher-questions/{tq['id']}", json={}, headers=teacher)
     assert r.status_code == 422
+
+
+async def test_delete_course_with_questions(client, api):
+    teacher, student, course_id, graph, session = await _setup(client, api)
+    r = await client.post(
+        "/api/questions",
+        json={
+            "session_id": session["id"],
+            "raw_text": "",
+            "image": "data:image/jpeg;base64,/9j/4AAQ",
+            "refined_text": "회귀가 뭔가요?",
+            "refine_rounds": 0,
+        },
+        headers=student,
+    )
+    assert r.status_code == 201, r.text
+    await api.drain()
+    async with client.ctx.sessionmaker() as db:
+        capture = (await db.get(StudentQuestion, r.json()["id"])).capture_path
+    assert Path(capture).is_file()
+
+    r = await client.delete(f"/api/courses/{course_id}", headers=teacher)
+    assert r.status_code == 204, r.text
+    assert (await client.get("/api/courses", headers=teacher)).json() == []
+    assert (await client.get("/api/me/questions", headers=student)).json() == []
+    assert not Path(capture).exists()
