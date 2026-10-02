@@ -1,9 +1,9 @@
 {
-  "name": "desktop",
+  "name": "askkup",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "An ASKKUP Electron application with React and TypeScript",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "pegood0217@gmail.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",
