@@ -35,9 +35,9 @@ export default function SignupPage(): React.JSX.Element {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-indigo-50 to-sky-50 p-6">
+    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-sky-50 p-6">
       <form onSubmit={submit} className={`${card} w-full max-w-sm space-y-4 p-8`}>
-        <h1 className="text-center text-xl font-bold text-indigo-700">회원가입</h1>
+        <h1 className="text-center text-xl font-bold text-brand-700">회원가입</h1>
         <label className="block space-y-1">
           <span className="text-sm text-gray-700">이름</span>
           <input
@@ -94,7 +94,7 @@ export default function SignupPage(): React.JSX.Element {
         </button>
         <p className="text-center text-sm text-gray-600">
           이미 계정이 있나요?{' '}
-          <Link to="/login" className="text-indigo-600 hover:underline">
+          <Link to="/login" className="text-brand-600 hover:underline">
             로그인
           </Link>
         </p>

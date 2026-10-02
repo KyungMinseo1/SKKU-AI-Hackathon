@@ -10,7 +10,7 @@ from app import models  # noqa: F401 - register tables
 from app.ai.llm import build_ai_clients
 from app.config import get_settings
 from app.context import AppContext
-from app.db import Base, make_engine, make_sessionmaker
+from app.db import Base, add_missing_columns, make_engine, make_sessionmaker
 from app.models import Course, StudentQuestion, Week
 from app.routers import auth, courses, live, questions, sessions
 from app.services.classify import classify_question_job
@@ -32,6 +32,7 @@ async def lifespan(app: FastAPI):
     engine = make_engine(settings)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(add_missing_columns)
     sessionmaker = make_sessionmaker(engine)
     ctx = AppContext(settings, sessionmaker, build_ai_clients(settings), LiveHub(), JobRunner())
     app.state.ctx = ctx

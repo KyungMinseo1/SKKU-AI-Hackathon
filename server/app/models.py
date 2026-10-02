@@ -124,6 +124,17 @@ class ClassSession(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class SessionParticipant(Base):
+    """학생이 참여한 수업 기록 — 지난 수업 목록·재입장용."""
+
+    __tablename__ = "session_participants"
+    __table_args__ = (UniqueConstraint("session_id", "student_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("class_sessions.id", ondelete="CASCADE"), index=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 # ---- 저장소2: 학생 질문 ----
 
 
@@ -148,6 +159,9 @@ class StudentQuestion(Base):
     off_week: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     classified_at: Mapped[datetime | None] = mapped_column(DateTime)
+    memo: Mapped[str] = mapped_column(Text, default="", server_default="")
+    recall_answer: Mapped[str | None] = mapped_column(Text)
+    recall_answered_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 # ---- 저장소3: 교사 질문 (학생 식별자 없음) ----

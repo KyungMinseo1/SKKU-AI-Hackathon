@@ -4,6 +4,7 @@ import { api, errorMessage } from '../../api/client'
 import type { CourseOut, CourseSummary } from '../../api/types'
 import AppHeader from '../../components/AppHeader'
 import { btnPrimary, btnSecondary, card, errorText, input } from '../../lib/ui'
+import Logo from '../../components/Logo'
 
 function NewCourseModal({ onClose }: { onClose: () => void }): React.JSX.Element {
   const navigate = useNavigate()
@@ -97,7 +98,7 @@ export default function TeacherDashboard(): React.JSX.Element {
           </button>
         }
       >
-        <h1 className="text-lg font-bold text-indigo-700">ASKKUP</h1>
+        <Logo />
         <span className="text-gray-500">내 강의</span>
       </AppHeader>
       <main className="flex-1 p-6">
@@ -112,7 +113,7 @@ export default function TeacherDashboard(): React.JSX.Element {
           {courses?.map((c) => (
             <button
               key={c.id}
-              className={`${card} text-left transition hover:border-indigo-300 hover:shadow-md`}
+              className={`${card} text-left transition hover:border-brand-300 hover:shadow-md`}
               onClick={() => navigate(`/teacher/courses/${c.id}`)}
             >
               <div className="flex items-start justify-between gap-2">

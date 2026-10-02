@@ -20,6 +20,10 @@ export interface MindNode {
   count?: number
   detail?: string
   badge?: string
+  /** Questions attached directly to this concept per the server (known even when leaves are hidden). */
+  ownQuestions?: number
+  /** True when this node's subtree holds at least one student question. */
+  hasQuestions?: boolean
   children: MindNode[]
 }
 
@@ -31,13 +35,22 @@ export function idOf(mindId: string, prefix: 'course' | 'week' | 'node' | 'q'): 
   return Number.isInteger(n) ? n : null
 }
 
-/** Sets `count` on every non-question node to the number of question leaves in its subtree. */
-function withCounts(node: MindNode): number {
-  if (node.kind === 'question') return 1
-  let total = 0
-  for (const child of node.children) total += withCounts(child)
-  node.count = total
-  return total
+/**
+ * Sets `count` (question leaves in the subtree, or the server-side counts when leaves are hidden)
+ * and `hasQuestions` on every non-question node.
+ */
+function withCounts(node: MindNode): { leaves: number; own: number } {
+  if (node.kind === 'question') return { leaves: 1, own: 0 }
+  let leaves = 0
+  let own = node.ownQuestions ?? 0
+  for (const child of node.children) {
+    const sub = withCounts(child)
+    leaves += sub.leaves
+    own += sub.own
+  }
+  node.count = leaves || own
+  node.hasQuestions = node.count > 0
+  return { leaves, own }
 }
 
 const weekLabel = (w: { week_no: number; title: string }): string => `${w.week_no}주차 · ${w.title}`
@@ -72,6 +85,7 @@ function buildWeekNode(week: WeekOut, questions: TeacherQuestionOut[] | undefine
       label: n.title,
       detail: n.summary || undefined,
       kind: 'concept',
+      ownQuestions: questions ? 0 : n.question_count,
       children: []
     })
   }

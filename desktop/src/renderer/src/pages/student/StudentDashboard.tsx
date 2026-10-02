@@ -3,11 +3,99 @@ import { api, errorMessage } from '../../api/client'
 import type { SessionOut, StudentQuestionOut } from '../../api/types'
 import AppHeader from '../../components/AppHeader'
 import MindMap from '../../components/MindMap/MindMap'
-import QuestionDetail from '../../components/QuestionDetail'
+import QuestionDetail, { Modal, RecallButton, RecallQuiz } from '../../components/QuestionDetail'
+import { isRecallDue, useNow } from '../../lib/recall'
+import { formatDateTime } from '../../lib/format'
 import { buildStudentTree, idOf, type MindNode } from '../../lib/trees'
-import { btnPrimary, card, errorText, input } from '../../lib/ui'
+import { btnPrimary, btnSecondary, card, errorText, input } from '../../lib/ui'
+import Logo from '../../components/Logo'
 
-function JoinCard(): React.JSX.Element {
+async function enterSession(code: string): Promise<void> {
+  const s = await api<SessionOut>('/api/sessions/join', {
+    json: { code: code.trim().toUpperCase() }
+  })
+  window.askkup.openOverlay({
+    sessionId: s.id,
+    courseName: s.course_name,
+    weekNo: s.week_no,
+    weekTitle: s.week_title
+  })
+}
+
+/** Sessions the student joined (or asked in): open ones can be re-entered without typing the code. */
+function MySessions({
+  onViewCourse
+}: {
+  onViewCourse: (courseId: number) => void
+}): React.JSX.Element | null {
+  const [sessions, setSessions] = useState<SessionOut[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(
+    () =>
+      api<SessionOut[]>('/api/me/sessions')
+        .then(setSessions)
+        .catch((err) => setError(errorMessage(err))),
+    []
+  )
+  useEffect(() => {
+    void load()
+    window.addEventListener('focus', load)
+    return () => window.removeEventListener('focus', load)
+  }, [load])
+
+  if (!sessions?.length && !error) return null
+  return (
+    <div className="space-y-1.5 pt-2">
+      <h3 className="text-sm font-medium text-gray-600">참여한 수업</h3>
+      {error && <p className={errorText}>{error}</p>}
+      <ul className="max-h-48 divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200">
+        {sessions?.map((s) => (
+          <li key={s.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${s.status === 'open' ? 'bg-brand-500' : 'bg-gray-300'}`}
+            />
+            <span className="min-w-0 flex-1 truncate">
+              <span className="font-medium">{s.course_name}</span>
+              <span className="text-gray-500">
+                {' '}
+                · {s.week_no}주차 {s.week_title}
+              </span>
+            </span>
+            <span className="shrink-0 text-xs text-gray-400">{formatDateTime(s.opened_at)}</span>
+            {s.status === 'open' ? (
+              <button
+                className={`${btnPrimary} shrink-0 py-1 text-xs`}
+                onClick={() =>
+                  enterSession(s.code).catch((err) => {
+                    setError(errorMessage(err))
+                    void load()
+                  })
+                }
+              >
+                다시 들어가기
+              </button>
+            ) : (
+              <button
+                className={`${btnSecondary} shrink-0 py-1 text-xs`}
+                title="종료된 수업입니다. 이 과목에서 남긴 질문을 봅니다"
+                onClick={() => onViewCourse(s.course_id)}
+              >
+                종료됨 · 질문 보기
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function JoinCard({
+  onViewCourse
+}: {
+  onViewCourse: (courseId: number) => void
+}): React.JSX.Element {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -17,15 +105,7 @@ function JoinCard(): React.JSX.Element {
     setBusy(true)
     setError(null)
     try {
-      const s = await api<SessionOut>('/api/sessions/join', {
-        json: { code: code.trim().toUpperCase() }
-      })
-      window.askkup.openOverlay({
-        sessionId: s.id,
-        courseName: s.course_name,
-        weekNo: s.week_no,
-        weekTitle: s.week_title
-      })
+      await enterSession(code)
       setCode('')
     } catch (err) {
       setError(errorMessage(err))
@@ -50,6 +130,7 @@ function JoinCard(): React.JSX.Element {
         </button>
       </form>
       {error && <p className={errorText}>{error}</p>}
+      <MySessions onViewCourse={onViewCourse} />
     </section>
   )
 }
@@ -60,6 +141,12 @@ export default function StudentDashboard(): React.JSX.Element {
   const [courseId, setCourseId] = useState<number | null>(null)
   const [mode, setMode] = useState<'concept' | 'type'>('concept')
   const [selected, setSelected] = useState<MindNode | null>(null)
+  const [recallId, setRecallId] = useState<number | null>(null)
+  const now = useNow()
+
+  const replaceQuestion = useCallback((q: StudentQuestionOut) => {
+    setQuestions((list) => list?.map((x) => (x.id === q.id ? q : x)) ?? list)
+  }, [])
 
   const load = useCallback(
     () =>
@@ -108,23 +195,31 @@ export default function StudentDashboard(): React.JSX.Element {
   const selectedQuestionId = selected ? idOf(selected.id, 'q') : null
   const selectedQuestion = courseQuestions.find((q) => q.id === selectedQuestionId)
 
+  const dueRecalls = (questions ?? []).filter((q) => isRecallDue(q, now))
+  const recallQuestion = questions?.find((q) => q.id === recallId)
+
   const pill = (active: boolean): string =>
-    `px-3 py-1 text-sm ${active ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`
+    `px-3 py-1 text-sm ${active ? 'bg-brand-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`
   const tabClass = (active: boolean): string =>
     `shrink-0 border-b-2 px-3 py-1.5 text-sm ${
       active
-        ? 'border-indigo-600 font-semibold text-indigo-700'
+        ? 'border-brand-600 font-semibold text-brand-700'
         : 'border-transparent text-gray-600 hover:text-gray-900'
     }`
 
   return (
     <div className="flex h-full flex-col bg-gray-50">
       <AppHeader>
-        <h1 className="text-lg font-bold text-indigo-700">ASKKUP</h1>
+        <Logo />
         <span className="text-gray-500">학생</span>
       </AppHeader>
       <main className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-        <JoinCard />
+        <JoinCard
+          onViewCourse={(id) => {
+            setCourseId(id)
+            setSelected(null)
+          }}
+        />
         <section className="flex min-h-[520px] flex-1 flex-col gap-2">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold">내 질문</h2>
@@ -136,6 +231,14 @@ export default function StudentDashboard(): React.JSX.Element {
                 유형별
               </button>
             </div>
+            {dueRecalls.length > 0 && (
+              <div className="ml-auto">
+                <RecallButton
+                  label={`리콜 퀴즈 ${dueRecalls.length}개 대기 중`}
+                  onClick={() => setRecallId(dueRecalls[0].id)}
+                />
+              </div>
+            )}
           </div>
           {error && <p className={errorText}>{error}</p>}
           {questions === null && !error && <p className="text-gray-500">불러오는 중…</p>}
@@ -167,11 +270,22 @@ export default function StudentDashboard(): React.JSX.Element {
                   height="100%"
                 />
               </div>
-              {selectedQuestion && <QuestionDetail question={selectedQuestion} />}
+              {selectedQuestion && (
+                <QuestionDetail question={selectedQuestion} onUpdated={replaceQuestion} />
+              )}
             </div>
           )}
         </section>
       </main>
+      {recallQuestion && (
+        <Modal onClose={() => setRecallId(null)}>
+          <RecallQuiz
+            question={recallQuestion}
+            onUpdated={replaceQuestion}
+            onDone={() => setRecallId(null)}
+          />
+        </Modal>
+      )}
     </div>
   )
 }

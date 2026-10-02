@@ -122,7 +122,7 @@ export default function QuestionPanel({
   }
 
   const refinedCard = refined && (
-    <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-gray-900">
+    <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-gray-900">
       {refined}
     </div>
   )
@@ -158,7 +158,7 @@ export default function QuestionPanel({
     case 'submitting':
       body = (
         <div className="flex items-center gap-2 py-6 text-sm text-gray-600">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           {phase === 'refining' ? '질문을 다듬고 있어요…' : '질문을 등록하고 있어요…'}
         </div>
       )
@@ -244,7 +244,7 @@ export default function QuestionPanel({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <h2 className="text-sm font-semibold text-indigo-700">질문하기</h2>
+      <h2 className="text-sm font-semibold text-brand-700">질문하기</h2>
       {body}
     </div>
   )

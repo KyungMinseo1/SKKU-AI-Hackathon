@@ -83,7 +83,7 @@ function WeekEditor({
   const [title, setTitle] = useState(week.title)
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold text-indigo-800">{week.week_no}주차</h3>
+      <h3 className="font-semibold text-brand-800">{week.week_no}주차</h3>
       <label className="block space-y-1">
         <span className="text-xs text-gray-600">제목</span>
         <div className="flex gap-2">

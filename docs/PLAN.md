@@ -9,7 +9,7 @@
 - 단일 Electron 앱(로그인 역할로 학생/교사 분기). 서버: Python FastAPI + SQLite.
 - LLM 제공자: OpenAI / Gemini / vLLM 모두 지원, **역할별 분리**: `QUESTION`(학생 질문 다듬기·필터, 비전) / `CURRICULUM`(실라버스 파싱, 주차 개념 생성, 질문 개념·유형 분류) + 별도 `EMBEDDING`.
 - 개념 분류: 하이브리드(임베딩으로 후보 top-k → LLM이 개념+유형+키워드 최종 결정). 유형은 항상 LLM.
-- 포함: 부적절 표현 필터 + 교수자 금지어, 교사 라이브 화면 시간순 대화창(타임스탬프). 제외: 선제 질문 제시, 교수자 수동 질문 재배치(질문 이동은 AI 자동 배정만).
+- 포함: 부적절 표현 필터 + 교수자 금지어, 교사 라이브 화면 시간순 대화창(타임스탬프). 제외: 선제 질문 제시. (교수자 수동 재배치는 13절 Shift+드래그로 추가됨.)
 
 ## Architecture
 
@@ -242,6 +242,21 @@ desktop/  (electron-vite react-ts 템플릿)
 - `test_flow.py`: 교사/학생 가입 → 학생 토큰으로 `POST /api/courses` 403 → 교사 강좌 생성 → 데모 실라버스 PDF 업로드 → drain 후 graph에 주차 2개, 3주차 `gen_source='web'` 노드 존재, 9주차 생성 노드 없음 → 세션 열기(코드 6자, 허용 문자만) → 학생 join(소문자 입력도 성공) → refine ok → submit → drain → `GET /api/me/questions` status `classified` + concept_path 비어있지 않음 → `GET /api/sessions/{id}/questions` 1건이고 JSON에 `student_id`/`raw_text`/`name`/`email` 키 없음 → 세션 close 후 submit 409.
 - `test_regeneration.py`: 위 흐름으로 3주차 생성 개념 2개 확보 → id가 작은 개념을 PATCH로 이름 변경(edited) → 질문 등록·분류(FakeChat이 최대 id = 미편집 개념 선택) → `POST /api/weeks/{id}/regenerate` → drain → 편집 노드는 같은 id·새 이름으로 유지, 미편집 개념은 사라지고 새 개념 생성, 그 질문은 `classified`이며 concept_node_id가 새로 생성된 노드 id.
 - `test_filtering.py`: `find_banned`가 `"시 발"`, `"씨.발"`, `"ㅅㅂ"` 적중, `"새끼손가락"`·`"미친 듯이"`·`"시발점"` 비적중; 교수자 금지어 "바보" 추가 후 refine "바보 같은 질문" → `blocked`이며 FakeChat 호출 수 증가 없음; "점심 뭐 먹지" → LLM 판정 `blocked`.
+
+### 13. 추가 기능 (2026-10-03)
+- **지난 수업 재입장**
+  - `GET /api/courses/{id}/sessions`(teacher) → `SessionSummary[]` = `SessionOut` + `question_count`(그 세션 학생 질문 수), opened_at 내림차순. 교사 강의 화면 `수업 기록` 카드: 클릭 → 라이브 화면(종료 세션도 질문 조회 가능), 종료 세션 `다시 열기`.
+  - `POST /api/sessions/{id}/reopen`(teacher) → `SessionOut`(status open, closed_at null). 이미 open이면 그대로 반환. 같은 강좌에 다른 open 세션이 있으면 409 `"이미 진행 중인 수업이 있습니다. 먼저 종료해 주세요"`. 기존 코드가 다른 open 세션과 겹치면 새 코드 발급. 라이브 화면 종료 배너에도 `수업 다시 열기`.
+  - `session_participants(session_id, student_id, joined_at)` 테이블: `POST /api/sessions/join` 성공 시 기록(중복 무시).
+  - `GET /api/me/sessions`(student) → 참여했거나 질문을 남긴 세션 `SessionOut[]` opened_at 내림차순. 학생 `수업 참여` 카드 아래 `참여한 수업` 목록: open이면 `다시 들어가기`(코드로 join), closed면 `종료됨 · 질문 보기`(해당 강좌 탭 선택).
+- **교사 강의 화면 질문 표시**: `학생 질문 보기`(기본 켜짐)가 전체/주차 탭 모두에 적용되어 질문 잎 노드 표시. 질문을 가진 노드는 점선 호박색 halo + `💬 n` 배지(`MindMap markQuestions`). 질문 잎을 숨겨도 `NodeOut.question_count`로 표시 유지.
+- **Shift+드래그 이동**(교사 강의 화면 마인드맵): Shift를 누른 동안만 노드 드래그 가능, 원 위에 놓으면 이동.
+  - 개념/주제 노드 → 다른 개념/주제(`PATCH /api/nodes/{id} {parent_id, week_id}`) 또는 주차(`{parent_id: null, week_id}`). 자기 하위로는 불가.
+  - 질문 노드 → `PATCH /api/teacher-questions/{id} QuestionMove{concept_node_id?: int, week_id?: int}` → `TeacherQuestionOut`. concept_node_id가 있으면 그 노드의 주차로, 없으면 week_id 주차 바로 아래(개념 없음). 둘 다 없으면 422 `"이동할 노드나 주차가 필요합니다"`, 다른 강좌의 노드/주차는 404. 저장소2(student_questions)의 concept/assigned_week/off_week도 같이 갱신하고 hub에 `question.updated` publish.
+- **학생 메모**: `student_questions.memo TEXT DEFAULT ''`. `PATCH /api/me/questions/{id}/memo {memo ≤4000}`(student, 본인 것만, 아니면 404 `"질문을 찾을 수 없습니다"`) → `StudentQuestionOut`. 질문 상세 패널 클릭 → 확대 모달에 메모 편집기(blur/Ctrl+S/버튼 저장).
+- **리콜 퀴즈**: 설정 `RECALL_DELAY_MINUTES`(기본 10). `StudentQuestionOut`에 `memo`, `recall_due_at`(= created_at + 지연), `recall_answer`, `recall_answered_at` 추가. `POST /api/me/questions/{id}/recall {answer 1..4000}` → 저장 후 `StudentQuestionOut`; 기한 전이면 409 `"아직 리콜 퀴즈를 풀 수 없습니다"`. 학생 화면: 기한이 지나고 답이 없으면 `다듬은 질문` 위에 깜빡이는 `🧠 리콜 퀴즈` 버튼, `내 질문` 헤더에 `리콜 퀴즈 N개 대기 중` 버튼(30초마다 재평가). 답변은 상세에 `내 리콜 답변`으로 표시.
+- **스키마 보충**: 서버 시작 시 `add_missing_columns`가 기존 SQLite 테이블에 없는 컬럼을 `ALTER TABLE ADD COLUMN`으로 추가(기존 DB 유지).
+- 테스트 `test_extras.py`: 세션 기록·재개(409 포함)·학생 세션 목록, 메모·리콜(기한 전 409 → created_at 1시간 당긴 뒤 200), 질문 이동(개념/주차/빈 본문 422).
 
 ## Critical files & anchors
 - `server/app/ai/llm.py` — 3개 제공자를 AsyncOpenAI+base_url 단일 경로로 묶고 웹 검색만 분기; 구조화 출력 폴백·재시도 위치.

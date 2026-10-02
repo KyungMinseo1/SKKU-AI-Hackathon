@@ -7,6 +7,8 @@
 
 상세 설계는 [docs/PLAN.md](docs/PLAN.md)를 참고하세요.
 
+macOS 사용자는 [README.macOS.md](README.macOS.md)를 참고하세요.
+
 ## 구조
 
 ```

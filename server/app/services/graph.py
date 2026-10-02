@@ -1,4 +1,5 @@
 from collections.abc import Iterable, Sequence
+from datetime import timedelta
 
 import numpy as np
 from sqlalchemy import delete, select, update
@@ -145,7 +146,7 @@ async def teacher_questions_out(
 
 
 async def student_questions_out(
-    db: AsyncSession, rows: Sequence[StudentQuestion]
+    db: AsyncSession, rows: Sequence[StudentQuestion], recall_delay_minutes: float
 ) -> list[StudentQuestionOut]:
     if not rows:
         return []
@@ -175,6 +176,10 @@ async def student_questions_out(
                 has_capture=r.capture_path is not None,
                 off_week=r.off_week,
                 created_at=r.created_at,
+                memo=r.memo or "",
+                recall_due_at=r.created_at + timedelta(minutes=recall_delay_minutes),
+                recall_answer=r.recall_answer,
+                recall_answered_at=r.recall_answered_at,
             )
         )
     return out

@@ -17,6 +17,15 @@ export const QUESTION_TYPE_CLASS: Record<QuestionType, string> = {
   reflective: 'bg-rose-100 border-rose-400 text-rose-900'
 }
 
+/** Muted hex colors per type, used for the bubble mind map branches. */
+export const QUESTION_TYPE_COLOR: Record<QuestionType, string> = {
+  info_seeking: '#6f8fae',
+  info_expanding: '#4f8a8b',
+  application_expanding: '#c27a63',
+  connecting: '#9d7fa6',
+  reflective: '#c48a92'
+}
+
 /** Fixed display order for type trees. */
 export const QUESTION_TYPE_CODES: QuestionType[] = [
   'info_seeking',

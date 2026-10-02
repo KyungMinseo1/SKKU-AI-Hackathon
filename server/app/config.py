@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     DATA_DIR: str = "./data"
     JWT_SECRET: str = "dev-secret-change-me"
     JWT_EXPIRE_DAYS: int = 7
+    # 질문 등록 후 리콜 퀴즈가 열리기까지의 시간(분)
+    RECALL_DELAY_MINUTES: float = 10
 
     OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""

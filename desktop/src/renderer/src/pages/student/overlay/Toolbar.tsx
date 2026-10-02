@@ -28,7 +28,7 @@ function ToolButton({
       title={label}
       onClick={onClick}
       className={`flex w-14 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[11px] transition ${
-        active ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+        active ? 'bg-brand-600 text-white' : 'text-gray-700 hover:bg-gray-100'
       }`}
     >
       <span className="text-lg leading-none">{icon}</span>
@@ -48,7 +48,16 @@ export default function Toolbar({
   onMouseEnter,
   onMouseLeave
 }: ToolbarProps): React.JSX.Element {
-  const toggleMode = (m: OverlayMode): void => setMode(mode === m ? 'idle' : m)
+  // Drawing tools and the question panel are mutually exclusive: picking one switches off the other.
+  const toggleMode = (m: OverlayMode): void => {
+    const next = mode === m ? 'idle' : m
+    if (next !== 'idle' && panelOpen) onTogglePanel()
+    setMode(next)
+  }
+  const togglePanel = (): void => {
+    if (!panelOpen) setMode('idle')
+    onTogglePanel()
+  }
   return (
     <div
       className="fixed right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1 rounded-2xl border border-gray-200 bg-white/95 p-1.5 shadow-xl"
@@ -67,7 +76,7 @@ export default function Toolbar({
       />
       <ToolButton label="모두 지우기" icon="🗑️" onClick={onClear} />
       <div className="my-0.5 h-px w-10 bg-gray-200" />
-      <ToolButton label="질문" icon="💬" active={panelOpen} onClick={onTogglePanel} />
+      <ToolButton label="질문" icon="💬" active={panelOpen} onClick={togglePanel} />
       <ToolButton label="대시보드" icon="🏠" onClick={() => window.askkup.showDashboard()} />
       <ToolButton label="나가기" icon="✖️" onClick={() => window.askkup.closeOverlay()} />
     </div>

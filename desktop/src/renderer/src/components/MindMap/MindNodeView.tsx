@@ -1,71 +1,117 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import type { QuestionType } from '../../api/types'
 import type { MindNodeKind } from '../../lib/trees'
-import { questionTypeClass } from '../../lib/questionTypes'
-import { NODE_WIDTH, type MindFlowNode } from './layout'
+import type { MindFlowNode } from './layout'
 
-const KIND_CLASS: Record<Exclude<MindNodeKind, 'type'>, string> = {
-  root: 'bg-slate-800 border-slate-900 text-white font-semibold',
-  week: 'bg-indigo-100 border-indigo-400 text-indigo-900 font-medium',
-  topic: 'bg-sky-100 border-sky-400 text-sky-900',
-  concept: 'bg-emerald-50 border-emerald-400 text-emerald-900',
-  group: 'bg-gray-100 border-gray-400 text-gray-700',
-  question: 'bg-white border-amber-400 text-gray-800'
+/** Invisible handle pinned to the circle centre so straight edges run centre-to-centre. */
+const centerHandle: React.CSSProperties = {
+  left: '50%',
+  top: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 1,
+  height: 1,
+  minWidth: 0,
+  minHeight: 0,
+  border: 0,
+  background: 'transparent',
+  opacity: 0
 }
 
-const handleClass = '!h-1.5 !w-1.5 !min-h-0 !min-w-0 !border-0 !bg-slate-400'
+const tint = (color: string, pct: number): string => `color-mix(in srgb, ${color} ${pct}%, white)`
+const shade = (color: string, pct: number): string => `color-mix(in srgb, ${color} ${pct}%, black)`
+
+function circleStyle(kind: MindNodeKind, depth: number, color: string): React.CSSProperties {
+  if (depth === 0) {
+    return { background: color, color: 'white', boxShadow: `0 6px 18px ${tint(color, 45)}` }
+  }
+  if (kind === 'question') {
+    return {
+      background: 'white',
+      border: `1.5px solid ${tint(color, 70)}`,
+      color: shade(color, 55)
+    }
+  }
+  if (depth === 1) {
+    return { background: color, color: 'white', border: `2px solid ${shade(color, 88)}` }
+  }
+  return {
+    background: tint(color, depth === 2 ? 26 : 16),
+    border: `1.5px solid ${tint(color, 80)}`,
+    color: shade(color, 50)
+  }
+}
 
 export default function MindNodeView({ data }: NodeProps<MindFlowNode>): React.JSX.Element {
-  const { mind, expanded, open, selected, height } = data
-  const colorClass =
-    mind.kind === 'type'
-      ? questionTypeClass(mind.id.slice('type-'.length) as QuestionType)
-      : KIND_CLASS[mind.kind]
+  const { mind, depth, diameter, color, expanded, open, selected, dragging, dropTarget, marked } =
+    data
   const hiddenChildren = mind.children.length > 0 && !expanded ? mind.children.length : 0
   const showDetail = mind.kind === 'question' && open && mind.detail
+  const fontSize = depth === 0 ? 13 : depth === 1 ? 11.5 : mind.kind === 'question' ? 10 : 10.5
 
   return (
     <div
-      className={`relative flex cursor-pointer items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm shadow-sm ${colorClass} ${
-        selected ? 'ring-2 ring-offset-1 ring-blue-500' : ''
-      }`}
-      style={{ width: NODE_WIDTH, minHeight: height - 4 }}
-      title={mind.kind === 'question' ? undefined : mind.detail}
+      className={`group relative ${dragging ? 'cursor-grabbing opacity-80' : 'cursor-pointer'}`}
+      style={{ width: diameter, height: diameter }}
     >
-      <Handle
-        type="target"
-        position={Position.Left}
-        className={handleClass}
-        isConnectable={false}
-      />
-      <div className="min-w-0 flex-1">
-        {showDetail ? (
-          <p className="whitespace-pre-wrap break-words text-xs leading-[18px]">{mind.detail}</p>
-        ) : (
-          <p className="truncate">{mind.label}</p>
-        )}
-        {mind.badge && (
-          <span className="mt-0.5 inline-block rounded bg-black/10 px-1.5 text-[10px] leading-4">
-            {mind.badge}
-          </span>
-        )}
+      <Handle type="target" position={Position.Top} style={centerHandle} isConnectable={false} />
+      {marked && !dragging && (
+        // Distinct marker for nodes holding student questions: a breathing amber halo.
+        <span
+          className="question-halo pointer-events-none absolute -inset-[7px] rounded-full border-2 border-dashed border-amber-400"
+          style={{ background: 'rgb(251 191 36 / 0.10)' }}
+        />
+      )}
+      {dropTarget && (
+        <span className="pointer-events-none absolute -inset-[11px] rounded-full border-[3px] border-brand-500 bg-brand-500/15" />
+      )}
+      <div
+        className={`flex h-full w-full items-center justify-center rounded-full px-1.5 text-center shadow-sm ${
+          dragging ? 'shadow-lg' : 'transition-transform duration-150 group-hover:scale-[1.07]'
+        }`}
+        style={{
+          ...circleStyle(mind.kind, depth, color),
+          fontSize,
+          outline: selected ? `2.5px solid ${shade(color, 80)}` : undefined,
+          outlineOffset: 3
+        }}
+        title={mind.detail ? `${mind.label}\n\n${mind.detail}` : mind.label}
+      >
+        <span
+          className={`line-clamp-3 break-keep leading-tight ${depth <= 1 ? 'font-semibold' : 'font-medium'}`}
+        >
+          {mind.label}
+        </span>
       </div>
       {mind.count != null && mind.count > 0 && (
-        <span className="shrink-0 rounded-full bg-amber-500 px-1.5 text-xs font-semibold leading-5 text-white">
+        <span
+          className="absolute -right-1.5 -top-1.5 flex items-center gap-0.5 rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold leading-4 text-white shadow-sm"
+          title={`질문 ${mind.count}개`}
+        >
+          <span className="text-[9px]">💬</span>
           {mind.count}
         </span>
       )}
       {hiddenChildren > 0 && (
-        <span className="shrink-0 rounded bg-black/10 px-1 text-xs leading-5">
+        <span
+          className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full px-1.5 text-[9.5px] font-semibold leading-4 text-white shadow-sm"
+          style={{ background: shade(color, 85) }}
+        >
           +{hiddenChildren}
         </span>
       )}
-      <Handle
-        type="source"
-        position={Position.Right}
-        className={handleClass}
-        isConnectable={false}
-      />
+      {mind.badge && (
+        <span className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gray-800/75 px-1.5 text-[9.5px] leading-4 text-white">
+          {mind.badge}
+        </span>
+      )}
+      {showDetail && (
+        <div
+          className="absolute left-1/2 top-full mt-6 w-60 -translate-x-1/2 cursor-default rounded-lg border bg-white p-2.5 text-xs leading-[18px] text-gray-800 shadow-lg"
+          style={{ borderColor: tint(color, 55) }}
+        >
+          <p className="whitespace-pre-wrap break-words">{mind.detail}</p>
+        </div>
+      )}
+      <Handle type="source" position={Position.Bottom} style={centerHandle} isConnectable={false} />
     </div>
   )
 }

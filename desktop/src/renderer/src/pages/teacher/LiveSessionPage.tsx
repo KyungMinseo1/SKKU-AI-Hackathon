@@ -108,8 +108,21 @@ export default function LiveSessionPage(): React.JSX.Element {
     }
   }
 
+  const reopenSession = async (): Promise<void> => {
+    if (!session) return
+    try {
+      const reopened = await api<SessionOut>(`/api/sessions/${session.id}/reopen`, {
+        method: 'POST'
+      })
+      setSession(reopened)
+      setClosed(false)
+    } catch (err) {
+      setError(errorMessage(err))
+    }
+  }
+
   const toggleClass = (active: boolean): string =>
-    `px-3 py-1 text-sm ${active ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`
+    `px-3 py-1 text-sm ${active ? 'bg-brand-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`
 
   return (
     <div className="flex h-full flex-col bg-gray-50">
@@ -133,22 +146,27 @@ export default function LiveSessionPage(): React.JSX.Element {
             <h1 className="truncate text-lg font-bold">
               {session.course_name} · {session.week_no}주차 {session.week_title}
             </h1>
-            <span className="rounded-lg bg-indigo-50 px-4 py-1 font-mono text-3xl font-bold tracking-[0.3em] text-indigo-700">
+            <span className="rounded-lg bg-brand-50 px-4 py-1 font-mono text-3xl font-bold tracking-[0.3em] text-brand-700">
               {session.code}
             </span>
           </>
         )}
       </AppHeader>
       {closed && (
-        <div className="bg-gray-800 px-6 py-2 text-sm text-white">
-          수업이 종료되었습니다.{' '}
+        <div className="flex items-center gap-3 bg-gray-800 px-6 py-2 text-sm text-white">
+          <span>종료된 수업입니다. 학생들이 남긴 질문은 계속 볼 수 있어요.</span>
           {session && (
-            <button
-              className="underline"
-              onClick={() => navigate(`/teacher/courses/${session.course_id}`)}
-            >
-              강의로 돌아가기
-            </button>
+            <>
+              <button className="underline" onClick={() => void reopenSession()}>
+                수업 다시 열기
+              </button>
+              <button
+                className="underline"
+                onClick={() => navigate(`/teacher/courses/${session.course_id}`)}
+              >
+                강의로 돌아가기
+              </button>
+            </>
           )}
         </div>
       )}

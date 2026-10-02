@@ -91,6 +91,10 @@ class SessionOut(BaseModel):
     closed_at: UtcDatetime | None
 
 
+class SessionSummary(SessionOut):
+    question_count: int
+
+
 class CourseSummary(BaseModel):
     id: int
     name: str
@@ -239,6 +243,21 @@ class QuestionCreate(BaseModel):
     refine_rounds: int = Field(default=0, ge=0)
 
 
+class QuestionMove(BaseModel):
+    """교사 질문 수동 이동: 개념 노드로, 또는 (concept_node_id 없이) 주차 바로 아래로."""
+
+    concept_node_id: int | None = None
+    week_id: int | None = None
+
+
+class MemoIn(BaseModel):
+    memo: str = Field(max_length=4000)
+
+
+class RecallIn(BaseModel):
+    answer: str = Field(min_length=1, max_length=4000)
+
+
 class StudentQuestionOut(BaseModel):
     id: int
     course: CourseRef
@@ -253,3 +272,7 @@ class StudentQuestionOut(BaseModel):
     has_capture: bool
     off_week: bool
     created_at: UtcDatetime
+    memo: str
+    recall_due_at: UtcDatetime
+    recall_answer: str | None
+    recall_answered_at: UtcDatetime | None

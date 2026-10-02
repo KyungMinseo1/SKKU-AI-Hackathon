@@ -13,13 +13,15 @@ import type {
   BannedWordOut,
   GraphOut,
   SessionOut,
+  SessionSummary,
   TeacherQuestionOut,
   WeekOut
 } from '../../api/types'
 import AppHeader from '../../components/AppHeader'
 import MindMap from '../../components/MindMap/MindMap'
 import NodeEditorPanel from '../../components/NodeEditorPanel'
-import { buildCourseTree, buildWeekTree, type MindNode } from '../../lib/trees'
+import { buildCourseTree, buildWeekTree, idOf, type MindNode } from '../../lib/trees'
+import { formatDateTime } from '../../lib/format'
 import { btn, btnPrimary, btnSecondary, card, errorText, input } from '../../lib/ui'
 
 const uploadForm = (file: File): FormData => {
@@ -181,7 +183,7 @@ function SyllabusCard({
           onDrop={onDrop}
           onClick={() => fileRef.current?.click()}
           className={`flex h-24 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed text-sm text-gray-500 ${
-            dragOver ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'
+            dragOver ? 'border-brand-500 bg-brand-50' : 'border-gray-300'
           }`}
         >
           {busy ? '업로드 중…' : '강의계획서 PDF를 끌어다 놓거나 클릭해서 업로드하세요'}
@@ -189,7 +191,7 @@ function SyllabusCard({
       )}
       {course.syllabus_status === 'parsing' && (
         <div className="flex items-center gap-2 text-sm text-gray-700">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
           실라버스 분석 중…
         </div>
       )}
@@ -289,16 +291,83 @@ function BannedWordsCard({ courseId }: { courseId: number }): React.JSX.Element 
   )
 }
 
+/** Past and current sessions: open any to review its questions, reopen a finished one. */
+function SessionHistoryCard({
+  courseId,
+  hasOpenSession
+}: {
+  courseId: number
+  hasOpenSession: boolean
+}): React.JSX.Element {
+  const navigate = useNavigate()
+  const [sessions, setSessions] = useState<SessionSummary[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    api<SessionSummary[]>(`/api/courses/${courseId}/sessions`)
+      .then(setSessions)
+      .catch((err) => setError(errorMessage(err)))
+  }, [courseId, hasOpenSession])
+
+  const reopen = async (s: SessionSummary): Promise<void> => {
+    try {
+      const opened = await api<SessionOut>(`/api/sessions/${s.id}/reopen`, { method: 'POST' })
+      navigate(`/teacher/sessions/${opened.id}/live`)
+    } catch (err) {
+      setError(errorMessage(err))
+    }
+  }
+
+  return (
+    <section className={`${card} flex-1 space-y-2`}>
+      <h2 className="font-semibold">수업 기록</h2>
+      {error && <p className={errorText}>{error}</p>}
+      {sessions?.length === 0 && <p className="text-sm text-gray-400">아직 연 수업이 없습니다.</p>}
+      <ul className="max-h-40 space-y-1 overflow-y-auto">
+        {sessions?.map((s) => (
+          <li
+            key={s.id}
+            className="flex items-center gap-2 rounded-md px-1 py-1 text-sm hover:bg-gray-50"
+          >
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${s.status === 'open' ? 'bg-red-500' : 'bg-gray-300'}`}
+            />
+            <button
+              className="min-w-0 flex-1 truncate text-left"
+              title="수업 화면에서 질문 보기"
+              onClick={() => navigate(`/teacher/sessions/${s.id}/live`)}
+            >
+              <span className="font-medium">{s.week_no}주차</span>
+              <span className="text-gray-500"> · {formatDateTime(s.opened_at).slice(0, 16)}</span>
+            </button>
+            <span className="shrink-0 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800">
+              💬 {s.question_count}
+            </span>
+            {s.status === 'closed' && (
+              <button
+                className="shrink-0 rounded px-1.5 py-0.5 text-xs text-brand-700 hover:bg-brand-50 disabled:cursor-not-allowed disabled:text-gray-300"
+                disabled={hasOpenSession}
+                title={
+                  hasOpenSession ? '진행 중인 수업을 먼저 종료해 주세요' : '이 수업을 다시 엽니다'
+                }
+                onClick={() => void reopen(s)}
+              >
+                다시 열기
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 function WeekControls({
   week,
-  onChanged,
-  showQuestions,
-  setShowQuestions
+  onChanged
 }: {
   week: WeekOut
   onChanged: () => Promise<void>
-  showQuestions: boolean
-  setShowQuestions: (v: boolean) => void
 }): React.JSX.Element {
   const [title, setTitle] = useState(week.title)
   const [error, setError] = useState<string | null>(null)
@@ -342,7 +411,7 @@ function WeekControls({
   return (
     <section className={`${card} space-y-3`}>
       <div className="flex flex-wrap items-center gap-3">
-        <span className="font-semibold text-indigo-800">{week.week_no}주차</span>
+        <span className="font-semibold text-brand-800">{week.week_no}주차</span>
         <input
           className={`${input} max-w-sm font-medium`}
           value={title}
@@ -382,14 +451,6 @@ function WeekControls({
         >
           다시 생성
         </button>
-        <label className="ml-auto flex items-center gap-1.5 text-sm">
-          <input
-            type="checkbox"
-            checked={showQuestions}
-            onChange={(e) => setShowQuestions(e.target.checked)}
-          />
-          질문 보기
-        </label>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-gray-600">교안:</span>
@@ -456,7 +517,7 @@ export default function CoursePage(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<'all' | number>('all')
   const [selected, setSelected] = useState<MindNode | null>(null)
-  const [showQuestions, setShowQuestions] = useState(false)
+  const [showQuestions, setShowQuestions] = useState(true)
   const [questions, setQuestions] = useState<TeacherQuestionOut[]>([])
   const [showSessionModal, setShowSessionModal] = useState(false)
   const [newWeekTitle, setNewWeekTitle] = useState<string | null>(null)
@@ -514,9 +575,50 @@ export default function CoursePage(): React.JSX.Element {
 
   const tree = useMemo(() => {
     if (!graph) return null
-    if (effectiveTab === 'all') return buildCourseTree(graph)
+    if (effectiveTab === 'all') return buildCourseTree(graph, showQuestions ? questions : undefined)
     return buildWeekTree(graph, effectiveTab, showQuestions ? questions : undefined)
   }, [graph, effectiveTab, showQuestions, questions])
+
+  const canMove = useCallback(
+    (node: MindNode) => idOf(node.id, 'node') != null || idOf(node.id, 'q') != null,
+    []
+  )
+  const canDrop = useCallback((node: MindNode, target: MindNode) => {
+    if (idOf(target.id, 'node') == null && idOf(target.id, 'week') == null) return false
+    if (target.children.some((c) => c.id === node.id)) return false // already there
+    const inSubtree = (n: MindNode): boolean => n.id === target.id || n.children.some(inSubtree)
+    return !inSubtree(node)
+  }, [])
+
+  const moveNode = useCallback(
+    async (node: MindNode, target: MindNode) => {
+      if (!graph) return
+      const targetNode = idOf(target.id, 'node')
+      const targetWeek =
+        targetNode != null
+          ? graph.weeks.find((w) => w.nodes.some((n) => n.id === targetNode))?.id
+          : idOf(target.id, 'week')
+      const questionId = idOf(node.id, 'q')
+      const nodeId = idOf(node.id, 'node')
+      try {
+        if (questionId != null) {
+          await api(`/api/teacher-questions/${questionId}`, {
+            method: 'PATCH',
+            json: targetNode != null ? { concept_node_id: targetNode } : { week_id: targetWeek }
+          })
+        } else if (nodeId != null) {
+          await api(`/api/nodes/${nodeId}`, {
+            method: 'PATCH',
+            json: { parent_id: targetNode, week_id: targetWeek }
+          })
+        }
+        await Promise.all([loadGraph(), loadQuestions()])
+      } catch (err) {
+        setError(errorMessage(err))
+      }
+    },
+    [graph, loadGraph, loadQuestions]
+  )
 
   const addWeek = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
@@ -541,7 +643,7 @@ export default function CoursePage(): React.JSX.Element {
         ) : (
           <p className="text-gray-500">불러오는 중…</p>
         )}
-        <Link to="/teacher" className="text-indigo-600 hover:underline">
+        <Link to="/teacher" className="text-brand-600 hover:underline">
           ← 강의 목록
         </Link>
       </div>
@@ -570,7 +672,7 @@ export default function CoursePage(): React.JSX.Element {
   const tabClass = (active: boolean): string =>
     `shrink-0 rounded-t-md border-b-2 px-3 py-1.5 text-sm ${
       active
-        ? 'border-indigo-600 font-semibold text-indigo-700'
+        ? 'border-brand-600 font-semibold text-brand-700'
         : 'border-transparent text-gray-600 hover:text-gray-900'
     }`
 
@@ -590,6 +692,7 @@ export default function CoursePage(): React.JSX.Element {
         <div className="flex gap-3">
           <SyllabusCard graph={graph} onChanged={loadGraph} />
           <BannedWordsCard courseId={courseId} />
+          <SessionHistoryCard courseId={courseId} hasOpenSession={!!graph.open_session} />
         </div>
         <nav className="flex gap-1 overflow-x-auto border-b border-gray-200">
           <button
@@ -635,20 +738,35 @@ export default function CoursePage(): React.JSX.Element {
               </button>
             </form>
           )}
+          <label className="ml-auto flex shrink-0 items-center gap-1.5 pb-1 text-sm">
+            <input
+              type="checkbox"
+              checked={showQuestions}
+              onChange={(e) => setShowQuestions(e.target.checked)}
+            />
+            학생 질문 보기
+          </label>
         </nav>
         {activeWeek && (
           <WeekControls
             key={`${activeWeek.id}:${activeWeek.title}`}
             week={activeWeek}
             onChanged={reload}
-            showQuestions={showQuestions}
-            setShowQuestions={setShowQuestions}
           />
         )}
         <div className="flex min-h-[520px] flex-1 gap-3">
           <div className="min-w-0 flex-1">
             {tree ? (
-              <MindMap root={tree} selectedId={selected?.id} onSelect={setSelected} height="100%" />
+              <MindMap
+                root={tree}
+                selectedId={selected?.id}
+                onSelect={setSelected}
+                height="100%"
+                markQuestions
+                onMoveNode={(node, target) => void moveNode(node, target)}
+                canMove={canMove}
+                canDrop={canDrop}
+              />
             ) : (
               <p className="text-gray-500">주차가 없습니다.</p>
             )}

@@ -150,6 +150,14 @@ export interface StudentQuestionOut {
   has_capture: boolean
   off_week: boolean
   created_at: string
+  memo: string
+  recall_due_at: string
+  recall_answer: string | null
+  recall_answered_at: string | null
+}
+
+export interface SessionSummary extends SessionOut {
+  question_count: number
 }
 
 export type LiveMessage =

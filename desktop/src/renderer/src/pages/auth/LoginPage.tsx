@@ -4,6 +4,7 @@ import { api, errorMessage } from '../../api/client'
 import type { AuthOut } from '../../api/types'
 import { roleHome, useAuth } from '../../stores/auth'
 import { btnPrimary, card, errorText, input } from '../../lib/ui'
+import Logo from '../../components/Logo'
 
 export default function LoginPage(): React.JSX.Element {
   const navigate = useNavigate()
@@ -34,10 +35,10 @@ export default function LoginPage(): React.JSX.Element {
   }
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-indigo-50 to-sky-50 p-6">
+    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-brand-50 to-sky-50 p-6">
       <form onSubmit={submit} className={`${card} w-full max-w-sm space-y-4 p-8`}>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-indigo-700">ASKKUP</h1>
+          <Logo className="text-3xl" />
           <p className="text-sm text-gray-500">질문, 잇다</p>
         </div>
         <label className="block space-y-1">
@@ -84,7 +85,7 @@ export default function LoginPage(): React.JSX.Element {
         </button>
         <p className="text-center text-sm text-gray-600">
           계정이 없나요?{' '}
-          <Link to="/signup" className="text-indigo-600 hover:underline">
+          <Link to="/signup" className="text-brand-600 hover:underline">
             회원가입
           </Link>
         </p>
