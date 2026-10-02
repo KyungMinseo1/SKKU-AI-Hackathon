@@ -1,0 +1,187 @@
+{
+  "communities": {
+    "0": [
+      "docs_plan_classify_question_job",
+      "docs_plan_live_session",
+      "docs_plan_off_week_assignment",
+      "docs_plan_structural_anonymity",
+      "docs_plan_three_stores",
+      "references_askkup_overview_anonymous_questions",
+      "references_askkup_overview_syllabus_linkage"
+    ],
+    "1": [
+      "docs_plan_chatmodel",
+      "docs_plan_embedder",
+      "docs_plan_hybrid_concept_classification",
+      "docs_plan_llm_role_split",
+      "docs_plan_question_types"
+    ],
+    "2": [
+      "docs_plan_curriculum_pipeline",
+      "docs_plan_demo_syllabus",
+      "docs_plan_generate_week_job",
+      "docs_plan_implementation_plan",
+      "docs_plan_student_overlay"
+    ],
+    "3": [
+      "agents_askkup_app",
+      "docs_plan_content_filtering",
+      "references_askkup_overview_proactive_questions",
+      "references_askkup_overview_proposal"
+    ],
+    "4": [
+      "agents_electron_app",
+      "agents_fastapi_server",
+      "agents_repository_guidelines",
+      "agents_sqlite_db"
+    ],
+    "5": [
+      "docs_plan_mindmap",
+      "references_askkup_overview_existing_services"
+    ],
+    "6": [
+      "docs_plan_question_refinement",
+      "references_askkup_overview_question_reluctance"
+    ]
+  },
+  "cohesion": {
+    "0": 0.2857142857142857,
+    "1": 0.4,
+    "2": 0.4,
+    "3": 0.5,
+    "4": 0.8333333333333334,
+    "5": 1.0,
+    "6": 1.0
+  },
+  "gods": [
+    {
+      "id": "docs_plan_implementation_plan",
+      "label": "ASKKUP Implementation Plan",
+      "degree": 13
+    },
+    {
+      "id": "references_askkup_overview_proposal",
+      "label": "ASKKUP Hackathon Project Overview",
+      "degree": 8
+    },
+    {
+      "id": "agents_repository_guidelines",
+      "label": "Repository Guidelines (AGENTS.md)",
+      "degree": 5
+    },
+    {
+      "id": "docs_plan_hybrid_concept_classification",
+      "label": "Hybrid Concept Classification (embedding top-k + LLM)",
+      "degree": 4
+    },
+    {
+      "id": "docs_plan_classify_question_job",
+      "label": "classify_question_job",
+      "degree": 4
+    },
+    {
+      "id": "agents_fastapi_server",
+      "label": "FastAPI Server",
+      "degree": 3
+    },
+    {
+      "id": "docs_plan_three_stores",
+      "label": "Three Stores: Curriculum Graph / student_questions / teacher_questions",
+      "degree": 3
+    },
+    {
+      "id": "docs_plan_llm_role_split",
+      "label": "LLM Role Split QUESTION/CURRICULUM/EMBEDDING",
+      "degree": 3
+    },
+    {
+      "id": "agents_askkup_app",
+      "label": "ASKKUP (질문, 잇다) App",
+      "degree": 2
+    },
+    {
+      "id": "agents_electron_app",
+      "label": "Electron Desktop App (React+TS)",
+      "degree": 2
+    }
+  ],
+  "surprises": [
+    {
+      "source": "MindMap Component (depth-1 expand)",
+      "target": "Existing Services (Echo360, ClassPoint, Slido, Mentimeter, Perusall, Top Hat)",
+      "source_files": [
+        "docs/PLAN.md",
+        "references/질문, 잇다 ASKKUP 해커톤 프로젝트 개요.pdf"
+      ],
+      "confidence": "INFERRED",
+      "relation": "semantically_similar_to",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc ↔ paper); connects across different repos/directories; semantically similar concepts with no structural link"
+    },
+    {
+      "source": "ASKKUP (질문, 잇다) App",
+      "target": "ASKKUP Hackathon Project Overview",
+      "source_files": [
+        "AGENTS.md",
+        "references/질문, 잇다 ASKKUP 해커톤 프로젝트 개요.pdf"
+      ],
+      "confidence": "INFERRED",
+      "relation": "conceptually_related_to",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc ↔ paper); connects across different repos/directories; peripheral node `ASKKUP (질문, 잇다) App` unexpectedly reaches hub `ASKKUP Hackathon Project Overview`"
+    },
+    {
+      "source": "ASKKUP Implementation Plan",
+      "target": "Proactive Question Presentation (optional)",
+      "source_files": [
+        "docs/PLAN.md",
+        "references/질문, 잇다 ASKKUP 해커톤 프로젝트 개요.pdf"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "references",
+      "why": "crosses file types (doc ↔ paper); connects across different repos/directories; bridges separate communities; peripheral node `Proactive Question Presentation (optional)` unexpectedly reaches hub `ASKKUP Implementation Plan`"
+    },
+    {
+      "source": "ASKKUP Implementation Plan",
+      "target": "ASKKUP Hackathon Project Overview",
+      "source_files": [
+        "docs/PLAN.md",
+        "references/질문, 잇다 ASKKUP 해커톤 프로젝트 개요.pdf"
+      ],
+      "confidence": "EXTRACTED",
+      "relation": "cites",
+      "why": "crosses file types (doc ↔ paper); connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "Question Refinement with Confirmation Loop",
+      "target": "Reasons Students Don't Ask (psychological/cognitive/cultural)",
+      "source_files": [
+        "docs/PLAN.md",
+        "references/질문, 잇다 ASKKUP 해커톤 프로젝트 개요.pdf"
+      ],
+      "confidence": "INFERRED",
+      "relation": "rationale_for",
+      "why": "inferred connection - not explicitly stated in source; crosses file types (doc ↔ paper); connects across different repos/directories"
+    }
+  ],
+  "questions": [
+    {
+      "type": "bridge_node",
+      "question": "Why does `ASKKUP Implementation Plan` connect `Community 2` to `Community 0`, `Community 1`, `Community 3`, `Community 4`, `Community 5`, `Community 6`?",
+      "why": "High betweenness centrality (0.726) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `ASKKUP Hackathon Project Overview` connect `Community 3` to `Community 0`, `Community 2`, `Community 5`, `Community 6`?",
+      "why": "High betweenness centrality (0.254) - this node is a cross-community bridge."
+    },
+    {
+      "type": "bridge_node",
+      "question": "Why does `Repository Guidelines (AGENTS.md)` connect `Community 4` to `Community 2`, `Community 3`?",
+      "why": "High betweenness centrality (0.219) - this node is a cross-community bridge."
+    },
+    {
+      "type": "isolated_nodes",
+      "question": "What connects `Transparent Student Overlay (pen/eraser)`, `Five Question Types (info_seeking ... reflective)`, `ChatModel` to the rest of the system?",
+      "why": "5 weakly-connected nodes found - possible documentation gaps or missing edges."
+    }
+  ]
+}

@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+docs/인공지능개론
+
+# ASKKUP
+node_modules/
+desktop/out/
+server/data/
