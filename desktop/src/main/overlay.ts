@@ -19,8 +19,19 @@ function destroyOverlay(): void {
   interactive = false
 }
 
-function openOverlay(params: OverlayParams, mainWindow: BrowserWindow | null): void {
+// macOS: hiding a native-fullscreen window leaves its Space behind as a black screen,
+// so drop back to the desktop Space before the main window is hidden.
+async function leaveFullScreen(win: BrowserWindow): Promise<void> {
+  if (!win.isFullScreen()) return
+  await new Promise<void>((resolve) => {
+    win.once('leave-full-screen', () => resolve())
+    win.setFullScreen(false)
+  })
+}
+
+async function openOverlay(params: OverlayParams, mainWindow: BrowserWindow | null): Promise<void> {
   destroyOverlay()
+  if (mainWindow && !mainWindow.isDestroyed()) await leaveFullScreen(mainWindow)
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
   const win = new BrowserWindow({
     ...display.bounds,
@@ -42,6 +53,9 @@ function openOverlay(params: OverlayParams, mainWindow: BrowserWindow | null): v
   overlayDisplay = display
   interactive = false
   win.setAlwaysOnTop(true, 'screen-saver')
+  // macOS: also float over other apps' fullscreen Spaces (e.g. slides in fullscreen).
+  if (process.platform === 'darwin')
+    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   applyInteractive()
   win.on('closed', () => {
     if (overlay === win) {
@@ -94,7 +108,7 @@ async function captureScreen(): Promise<string> {
 
 export function registerOverlayIpc(getMainWindow: () => BrowserWindow | null): void {
   ipcMain.on('overlay:open', (_event, params: OverlayParams) => {
-    openOverlay(params, getMainWindow())
+    void openOverlay(params, getMainWindow())
   })
 
   ipcMain.on('overlay:set-interactive', (_event, value: boolean) => {
