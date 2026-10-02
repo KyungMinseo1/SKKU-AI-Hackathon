@@ -1,6 +1,6 @@
 {
   "name": "askkup",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "An ASKKUP Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "pegood0217@gmail.com",
