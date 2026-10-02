@@ -89,6 +89,17 @@ export default function TeacherDashboard(): React.JSX.Element {
       .catch((err) => setError(errorMessage(err)))
   }, [])
 
+  const deleteCourse = async (course: CourseSummary): Promise<void> => {
+    if (!window.confirm(`'${course.name}' 강의를 삭제할까요? 주차·개념·교안이 모두 삭제됩니다.`)) return
+    setError(null)
+    try {
+      await api(`/api/courses/${course.id}`, { method: 'DELETE' })
+      setCourses((prev) => prev?.filter((c) => c.id !== course.id) ?? null)
+    } catch (err) {
+      setError(errorMessage(err))
+    }
+  }
+
   return (
     <div className="flex min-h-full flex-col bg-gray-50">
       <AppHeader
@@ -111,26 +122,37 @@ export default function TeacherDashboard(): React.JSX.Element {
         )}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
           {courses?.map((c) => (
-            <button
+            <div
               key={c.id}
-              className={`${card} text-left transition hover:border-brand-300 hover:shadow-md`}
-              onClick={() => navigate(`/teacher/courses/${c.id}`)}
+              className={`${card} relative transition hover:border-brand-300 hover:shadow-md`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="text-base font-semibold">{c.name}</h2>
-                {c.open_session && (
-                  <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
-                    수업 중
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-sm text-gray-500">
-                {[c.code, c.semester].filter(Boolean).join(' · ') || '\u00a0'}
-              </p>
-              <p className="mt-3 text-sm text-gray-700">
-                주차 {c.week_count}개 · 질문 {c.question_count}개
-              </p>
-            </button>
+              <button
+                className="w-full text-left"
+                onClick={() => navigate(`/teacher/courses/${c.id}`)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="text-base font-semibold">{c.name}</h2>
+                  {c.open_session && (
+                    <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                      수업 중
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  {[c.code, c.semester].filter(Boolean).join(' · ') || '\u00a0'}
+                </p>
+                <p className="mt-3 pr-12 text-sm text-gray-700">
+                  주차 {c.week_count}개 · 질문 {c.question_count}개
+                </p>
+              </button>
+              <button
+                className="absolute bottom-3 right-3 rounded px-1.5 py-0.5 text-xs text-gray-400 hover:bg-red-50 hover:text-red-600"
+                aria-label={`${c.name} 강의 삭제`}
+                onClick={() => void deleteCourse(c)}
+              >
+                삭제
+              </button>
+            </div>
           ))}
         </div>
       </main>
